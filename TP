@@ -1,0 +1,211 @@
+
+import numpy as np
+import math as ma
+import time
+import matplotlib.pyplot as pp
+
+
+def Cholesky(A):
+    n, m = np.shape(A)
+    L = np.zeros([n, m])
+    for k in range(n):
+        som = 0
+        for j in range(k):
+            som += L[k, j]**2
+        L[k, k] = (A[k, k] - som)**(1/2)
+        for i in range(k+1, n):
+            som1 = 0
+            for j in range(k):
+                som1 += L[k, j]*L[i, j]
+            L[i, k] = (A[i, k] - som1)/(L[k, k])
+    return L
+
+
+def ResolutionSysTriSup(T):
+    n, m = np.shape(T)
+    if m != n+1:
+        print("ce n'est pas une matrice augmenté")
+        return
+    X = np.zeros((n, 1))
+    for i in range(n-1, -1, -1):
+        somme = 0
+        for j in range(i, n):
+            somme = somme + T[i, j]*X[j, 0]
+        X[i, 0] = (T[i, n] - somme)/T[i, i]
+    return (X)
+
+
+def ResolutionSysTriInf(T):
+    n, m = np.shape(T)
+    if m != n+1:
+        print("ce n'est pas une matrice augmenté")
+        return
+    Y = np.zeros((n, 1))
+    for i in range(n):
+        somme = 0
+        for j in range(i):
+            somme = somme + (T[i, j])*(Y[j, 0])
+        Y[i, 0] = (T[i, -1] - somme)/T[i, i]
+    return(Y)
+
+
+def ResolutionCholesky(A, B):
+    L = Cholesky(A)
+    M = np.concatenate((L, B.T), axis=1)
+    Y = ResolutionSysTriInf(M)
+    N = np.concatenate((L.T, Y), axis=1)
+    X = ResolutionSysTriSup(N)
+    return (X)
+
+
+"""
+A = np.mat('[4 -2 -4 ; -2 10 5 ; -4 5 6 ]')
+B = np.mat('[6 -9 -7]')
+print('L = \n', Cholesky(A))
+print('X = \n', ResolutionCholesky(A, B))
+"""
+
+
+def ReductionGauss(Aaug):
+    n, m = np.shape(Aaug)
+    for k in range(0, n-1):
+        for i in range(k+1, n):
+            gik = Aaug[i, k] / Aaug[k, k]
+            Aaug[i, :] = Aaug[i, :] - gik*Aaug[k, :]
+    return Aaug
+
+
+def ResolutionSystTriSup1(Aaug):
+    n, m = np.shape(Aaug)
+    x = np.zeros(n)
+    if m != m+1:
+        x = np.zeros(n)
+    for i in range(n-1, -1, -1):
+        s = 0
+        for k in range(i+1, n):
+            s += x[k]*Aaug[i, k]
+        x[i] = (Aaug[i, n] - s) / Aaug[i, i]
+    return x
+
+
+def Gauss(A, B):
+    Aaug = np.column_stack([A, B])
+    Taug = ReductionGauss(Aaug)
+    X = ResolutionSystTriSup1(Taug)
+    print('matrice augmenté: ', Aaug)
+    print('matrice réduite : ', Taug)
+    return X
+
+
+def DecompositionLU(A):
+    gik_val = []
+    n, m = np.shape(A)
+    for k in range(0, n-1):
+        for i in range(k+1, n):
+            gik = A[i, k] / A[k, k]
+            gik_val.append(gik)
+            A[i, :] = A[i, :] - gik*A[k, :]
+    U = A
+    print("Upper : ", "\n",  U, "\n")
+    L = np.zeros((n, n))
+    n, m = np.shape(A)
+    k = 0
+    for i in range(0, n):
+        L[i, k] = gik_val[i] / gik_val[i]
+        k += 1
+    line = 0
+    for k in range(0, n-1):
+        for i in range(k+1, n):
+            L[i, k] = gik_val[line]
+            line += 1
+    print("Lower :", "\n", L, "\n")
+    return L, U
+
+
+def ResolutionLU(L, U, B):
+    Y = Gauss(L, B)
+    X = Gauss(U, Y)
+    return X
+
+
+def courbe1():
+    x = []
+    y = []
+    y1 = []
+    y2 = []
+    for i in range(10, 500, 10):
+        M1 = np.random.rand(i, i)
+        B = np.random.rand(i, 1)
+        C = np.dot(M1.T, M1)
+        Y = np.random.rand(i, i)
+        Z = np.random.rand(i, 1)
+
+        time_init = time.time()
+        ResolutionCholesky(C, B.T)
+        time_end = time.time()
+        temps = time_end - time_init
+
+        time_init1 = time.time()
+        Gauss(Y, Z)
+        time_end1 = time.time()
+        temps1 = time_end1 - time_init1
+
+        time_init2 = time.time()
+        [L, U] = DecompositionLU(M1)
+        ResolutionLU(L, U, B)
+        time_end2 = time.time()
+        temps2 = time_end2 - time_init2
+
+        x.append(ma.log(i))
+        y.append(ma.log(temps))
+        y1.append(ma.log(temps1))
+        y2.append(ma.log(temps2))
+    pp.plot(x, y, label='Cholesky')
+    pp.plot(x, y1, label='Gauss')
+    pp.plot(x, y2, label='DecompositionLU')
+    pp.title("Temps de calcul en fonction de la dimension")
+    pp.xlabel("Dimension")
+    pp.ylabel("Temps en sec")
+    pp.legend()
+    pp.show()
+
+
+def courbe2():
+    x = []
+    y = []
+    y1 = []
+    y2 = []
+    for i in range(100, 500, 50):
+        M1 = np.random.rand(i, i)
+        B = np.random.rand(i, 1)
+        C = np.dot(M1.T, M1)
+        D = B.T
+        Y = np.random.rand(i, i)
+        Z = np.random.rand(i, 1)
+        N = np.copy(M1)
+
+        a = ResolutionCholesky(C, D)
+        erreur = np.linalg.norm(C@a - B)
+
+        b = Gauss(Y, Z)
+        erreur1 = np.linalg.norm(Y@b - np.ravel(Z))
+
+        L, U = DecompositionLU(M1)
+        C = ResolutionLU(L, U, B)
+        erreur2 = np.linalg.norm(N@C - np.ravel(B))
+
+        x.append(ma.log(i))
+        y.append(ma.log(erreur))
+        y1.append(ma.log(erreur1))
+        y2.append(ma.log(erreur2))
+    pp.plot(x, y, label='Cholesky')
+    pp.plot(x, y1, label='Gauss')
+    pp.plot(x, y2, label='DecompositionLU')
+    pp.title("||AX -B|| en fonction de la dimension")
+    pp.xlabel("Dimension")
+    pp.ylabel("Erreur")
+    pp.legend()
+    pp.show()
+
+
+courbe1()
